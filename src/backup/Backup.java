@@ -65,12 +65,7 @@ public class Backup {
         }
         File diretorioGeral = new File(DIRETORIO_BACKUP);
 
-        File[] files = diretorioGeral.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                return f.isDirectory();
-            }
-        });
+        File[] files = diretorioGeral.listFiles((File f) -> f.isDirectory());
 
         System.out.println("Pastas: " + files.length);
 
@@ -101,9 +96,15 @@ public class Backup {
         if (!multi) {
             String db = DB_NAME;
 
-            String dumpcmd = "mysqldump -u " + DB_USER + " -p" + DB_USER_PASSWORD + " -P " + DB_PORT + " " + db + " > " + DIRETORIO_BACKUP_HOJE + "/" + db + ".sql";
+            String dumpcmd = "mysqldump -u " + DB_USER + " -p" + DB_USER_PASSWORD + " -P " + DB_PORT + " -B " + db + " > " + DIRETORIO_BACKUP_HOJE + "/" + db + ".sql";
 
-            Process exec = Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", dumpcmd});
+            Process exec;
+
+            if (System.getProperty("os.name").toLowerCase().equals("linux")) {
+                exec = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", dumpcmd});
+            } else {
+                exec = Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", dumpcmd});
+            }
 
             //esperar o comando acabar e checar se o valor exit e 0
             if (exec.waitFor() == 0) {
@@ -125,6 +126,43 @@ public class Backup {
                 System.out.println(str);
                 return;
             }
+
+            zipFolder(Paths.get(DIRETORIO_BACKUP_HOJE + "/" + db + ".sql"), Paths.get(DIRETORIO_BACKUP_HOJE + "/automacao.zip"));
+            boolean deleteFile = new File(DIRETORIO_BACKUP_HOJE + "/" + db + ".sql").delete();
+
+            db = "autorizanfe";
+
+            dumpcmd = "mysqldump -u " + DB_USER + " -p" + DB_USER_PASSWORD + " -P " + DB_PORT + " -B " + db + " > " + DIRETORIO_BACKUP_HOJE + "/" + db + ".sql";
+
+            if (System.getProperty("os.name").toLowerCase().equals("linux")) {
+                exec = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", dumpcmd});
+            } else {
+                exec = Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", dumpcmd});
+            }
+
+            //esperar o comando acabar e checar se o valor exit e 0
+            if (exec.waitFor() == 0) {
+                //normally terminated, a way to read the output
+                InputStream inputStream = exec.getInputStream();
+                byte[] buffer = new byte[inputStream.available()];
+                inputStream.read(buffer);
+
+                String str = new String(buffer);
+                System.out.println(str);
+            } else {
+                // problema
+                // ler erro do comando
+                InputStream errorStream = exec.getErrorStream();
+                byte[] buffer = new byte[errorStream.available()];
+                errorStream.read(buffer);
+
+                String str = new String(buffer);
+                System.out.println(str);
+                return;
+            }
+            zipFolder(Paths.get(DIRETORIO_BACKUP_HOJE + "/" + db + ".sql"), Paths.get(DIRETORIO_BACKUP_HOJE + "/autorizanfe.zip"));
+            deleteFile = new File(DIRETORIO_BACKUP_HOJE + "/" + db + ".sql").delete();
+
         }
 
         if (!DIRETORIO_CERTIFICADO.equals("")) {
@@ -139,25 +177,24 @@ public class Backup {
 
     private static void zipFolder(Path sourceFolderPath, Path zipPath) throws Exception {
 
-        ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipPath.toFile()));
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipPath.toFile()))) {
+            Files.walkFileTree(sourceFolderPath, new SimpleFileVisitor<Path>() {
 
-        Files.walkFileTree(sourceFolderPath, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    zos.putNextEntry(new ZipEntry(sourceFolderPath.relativize(file).toString()));
 
-                zos.putNextEntry(new ZipEntry(sourceFolderPath.relativize(file).toString()));
+                    Files.copy(file, zos);
 
-                Files.copy(file, zos);
+                    zos.closeEntry();
 
-                zos.closeEntry();
+                    return FileVisitResult.CONTINUE;
 
-                return FileVisitResult.CONTINUE;
+                }
 
-            }
-
-        });
-
-        zos.close();
+            });
+        }
 
     }
 
