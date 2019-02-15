@@ -126,7 +126,7 @@ public class Backup {
                 return;
             }
 
-            zipFolder(Paths.get(DIRETORIO_BACKUP_HOJE + "/" + db + ".sql"), Paths.get(DIRETORIO_BACKUP_HOJE + "/automacao.zip"));
+            zipFile(Paths.get(DIRETORIO_BACKUP_HOJE + "/" + db + ".sql"), Paths.get(DIRETORIO_BACKUP_HOJE + "/automacao.zip"));
             boolean deleteFile = new File(DIRETORIO_BACKUP_HOJE + "/" + db + ".sql").delete();
 
             db = "autorizanfe";
@@ -159,7 +159,7 @@ public class Backup {
                 System.out.println(str);
                 return;
             }
-            zipFolder(Paths.get(DIRETORIO_BACKUP_HOJE + "/" + db + ".sql"), Paths.get(DIRETORIO_BACKUP_HOJE + "/autorizanfe.zip"));
+            zipFile(Paths.get(DIRETORIO_BACKUP_HOJE + "/" + db + ".sql"), Paths.get(DIRETORIO_BACKUP_HOJE + "/autorizanfe.zip"));
             deleteFile = new File(DIRETORIO_BACKUP_HOJE + "/" + db + ".sql").delete();
 
         }
@@ -195,6 +195,22 @@ public class Backup {
             });
         }
 
+    }
+
+    private static void zipFile(Path sourceFolderPath, Path zipPath) throws Exception {
+        FileOutputStream fos = new FileOutputStream(zipPath.toFile().getPath());
+        ZipOutputStream zipOut = new ZipOutputStream(fos);
+        FileInputStream fis = new FileInputStream(sourceFolderPath.toFile());
+        ZipEntry zipEntry = new ZipEntry(sourceFolderPath.toFile().getName());
+        zipOut.putNextEntry(zipEntry);
+        byte[] bytes = new byte[1024];
+        int length;
+        while ((length = fis.read(bytes)) >= 0) {
+            zipOut.write(bytes, 0, length);
+        }
+        zipOut.close();
+        fis.close();
+        fos.close();
     }
 
 }
