@@ -40,7 +40,6 @@ public class Backup {
             config.load(inFile);
         }
 
-        String DB_HOST = config.getProperty("DB_HOST");
         String DB_USER = config.getProperty("DB_USER");
         String DB_USER_PASSWORD = config.getProperty("DB_USER_PASSWORD");
         String DB_PORT = config.getProperty("DB_PORT");
